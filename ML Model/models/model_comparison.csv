@@ -1,0 +1,4 @@
+Model,Accuracy (%),Macro F1 (%),Phishing Recall (%)
+Gradient Boosting,84.29,78.69,37.88
+Random Forest,84.2,77.62,34.52
+Logistic Regression,55.11,52.98,72.91

@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+*$py.class
+dataset2/venv/
+dataset2/*.csv
+dataset2/split/*.csv
+models/*.joblib
