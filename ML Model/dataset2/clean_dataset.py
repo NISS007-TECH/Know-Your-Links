@@ -1,37 +1,58 @@
 
+
+from pathlib import Path
 import pandas as pd
 
-# Load original dataset
-df = pd.read_csv("dataset2/malicious_phish.csv")
+BASE_DIR = Path(__file__).resolve().parent
 
-print("Original dataset shape:", df.shape)
 
-# Remove extra spaces from text columns
-df["url"] = df["url"].astype(str).str.strip()
-df["type"] = df["type"].astype(str).str.strip().str.lower()
+def main():
+    input_path = BASE_DIR / "malicious_phish.csv"
+    if not input_path.exists():
+        input_path = BASE_DIR / "main_malicious_phish.csv"
 
-# Remove rows with empty URL or label
-df = df[
-    df["url"].ne("") &
-    df["type"].ne("")
-].copy()
+    output_path = BASE_DIR / "malicious_phish_clean.csv"
 
-# Find URLs that have multiple labels
-label_counts = df.groupby("url")["type"].nunique()
-conflicts = label_counts[label_counts > 1].index
+    if not input_path.exists():
+        print(f"Original dataset not found at: {input_path}")
+        print("Please place 'malicious_phish.csv' or 'main_malicious_phish.csv' inside this dataset2 directory.")
+        return
 
-print("Conflicting URLs:", len(conflicts))
+    # Load original dataset
+    df = pd.read_csv(input_path)
 
-# Exclude conflicting URLs from this clean copy
-df = df[~df["url"].isin(conflicts)].copy()
+    print("Original dataset shape:", df.shape)
 
-# Remove exact duplicate rows
-df = df.drop_duplicates()
+    # Remove extra spaces from text columns
+    df["url"] = df["url"].astype(str).str.strip()
+    df["type"] = df["type"].astype(str).str.strip().str.lower()
 
-# Save a separate cleaned dataset
-df.to_csv("dataset2/malicious_phish_clean.csv", index=False)
+    # Remove rows with empty URL or label
+    df = df[
+        df["url"].ne("") &
+        df["type"].ne("")
+    ].copy()
 
-print("Cleaned dataset shape:", df.shape)
-print("Saved: dataset2/malicious_phish_clean.csv")
-print("\nCategory counts:")
-print(df["type"].value_counts())
+    # Find URLs that have multiple labels
+    label_counts = df.groupby("url")["type"].nunique()
+    conflicts = label_counts[label_counts > 1].index
+
+    print("Conflicting URLs:", len(conflicts))
+
+    # Exclude conflicting URLs from this clean copy
+    df = df[~df["url"].isin(conflicts)].copy()
+
+    # Remove exact duplicate rows
+    df = df.drop_duplicates()
+
+    # Save a separate cleaned dataset
+    df.to_csv(output_path, index=False)
+
+    print("Cleaned dataset shape:", df.shape)
+    print(f"Saved: {output_path}")
+    print("\nCategory counts:")
+    print(df["type"].value_counts())
+
+
+if __name__ == "__main__":
+    main()

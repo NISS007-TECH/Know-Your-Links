@@ -5,3 +5,4 @@ dataset2/venv/
 dataset2/*.csv
 dataset2/split/*.csv
 models/*.joblib
+!models/linkguard_gradient_boosting.joblib

@@ -1,20 +1,34 @@
 
+from pathlib import Path
 import pandas as pd
 
-df = pd.read_csv("dataset2/malicious_phish_clean.csv")
+BASE_DIR = Path(__file__).resolve().parent
 
-urls = df["url"].fillna("").astype(str).str.strip()
 
-has_scheme = urls.str.match(
-    r"^[a-zA-Z][a-zA-Z0-9+.-]*://"
-)
+def main():
+    data_path = BASE_DIR / "dataset2" / "malicious_phish_clean.csv"
+    if not data_path.exists():
+        print(f"Dataset not found at: {data_path}")
+        return
 
-print("Total URLs:", len(urls))
-print("URLs with http/https scheme:", has_scheme.sum())
-print("URLs without scheme:", (~has_scheme).sum())
+    df = pd.read_csv(data_path)
 
-print("\nSample URLs from dataset:")
-print(urls.head(10).to_string(index=False))
+    urls = df["url"].fillna("").astype(str).str.strip()
 
-print("\nURL category counts:")
-print(df["type"].value_counts())
+    has_scheme = urls.str.match(
+        r"^[a-zA-Z][a-zA-Z0-9+.-]*://"
+    )
+
+    print("Total URLs:", len(urls))
+    print("URLs with http/https scheme:", has_scheme.sum())
+    print("URLs without scheme:", (~has_scheme).sum())
+
+    print("\nSample URLs from dataset:")
+    print(urls.head(10).to_string(index=False))
+
+    print("\nURL category counts:")
+    print(df["type"].value_counts())
+
+
+if __name__ == "__main__":
+    main()

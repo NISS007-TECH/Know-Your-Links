@@ -80,15 +80,23 @@ def canonicalize_url(url):
     Example: 'https://www.google.com' -> 'google.com/'
              'google.com'            -> 'google.com/'
              'www.youtube.com'       -> 'youtube.com/'
+             'example.com?query=1'   -> 'example.com/?query=1'
     """
     u = str(url).strip()
     # Strip protocol prefix (http://, https://, ftp://, etc.)
     u = re.sub(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", "", u)
     u = re.sub(r"^/+", "", u)
     
-    parts = u.split("/", 1)
-    host = parts[0].lower().strip()
-    path_and_query = "/" + parts[1] if len(parts) > 1 else "/"
+    # Split host and path/query cleanly
+    for delim in ("/", "?", "#"):
+        if delim in u:
+            idx = u.index(delim)
+            host = u[:idx].lower().strip()
+            path_and_query = u[idx:] if delim == "/" else "/" + u[idx:]
+            break
+    else:
+        host = u.lower().strip()
+        path_and_query = "/"
     
     # Normalize common www. prefix
     if host.startswith("www.") and len(host) > 4:
@@ -125,7 +133,7 @@ def get_registered_domain(hostname):
 
 def extract_features(url):
     """
-    Extract a comprehensive set of 27 security and structural features
+    Extract a comprehensive set of 29 security and structural features
     from a URL for machine learning classification.
     """
     canon = canonicalize_url(url)
@@ -160,13 +168,13 @@ def extract_features(url):
     reg_sld = reg_domain.split(".")[0] if "." in reg_domain else reg_domain
     tld = reg_domain.split(".")[-1] if "." in reg_domain else ""
 
-    lower_canon = canon.lower()
     lower_path = path.lower()
 
     # Brand impersonation check (e.g. 'paypal-verify.xyz' where reg domain is not paypal.com)
+    # Check within hostname (and subdomains) only, NOT the URL path/query to avoid false positives
     brand_impersonation = 0
     for brand in BRANDS:
-        if brand in lower_canon:
+        if brand in hostname:
             if reg_sld != brand:
                 brand_impersonation = 1
                 break
@@ -174,11 +182,12 @@ def extract_features(url):
     # Verified top domain check (only authentic domains without spoofing)
     is_known_top = 1 if (reg_domain in KNOWN_TOP_DOMAINS and brand_impersonation == 0) else 0
 
-    # Subdomain depth (excluding www)
+    # Subdomain depth (excluding www and respecting multi-part TLDs)
     subdomain_count = 0
-    if hostname:
-        host_parts = hostname.split(".")
-        subdomain_count = max(0, len(host_parts) - 2)
+    if hostname and reg_domain:
+        subdomain_part = hostname[: -len(reg_domain)].rstrip(".")
+        if subdomain_part:
+            subdomain_count = len(subdomain_part.split("."))
 
     # Consecutive consonants in host (random gibberish indicator)
     consonants = re.findall(r"[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]+", hostname)
@@ -227,7 +236,8 @@ def extract_features(url):
 
 
 def main():
-    data_folder = Path("dataset2")
+    base_dir = Path(__file__).resolve().parent
+    data_folder = base_dir / "dataset2"
     input_file = data_folder / "malicious_phish_clean.csv"
     output_file = data_folder / "url_features.csv"
 

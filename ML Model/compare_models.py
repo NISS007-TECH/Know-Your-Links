@@ -1,58 +1,75 @@
 
+from pathlib import Path
 import pandas as pd
 import joblib
 from sklearn.metrics import accuracy_score, f1_score, recall_score
 
-# Load the same testing dataset
-test_df = pd.read_csv("dataset2/split/test.csv")
+BASE_DIR = Path(__file__).resolve().parent
 
-X_test = test_df.drop(columns=["type"])
-y_test = test_df["type"]
 
-# Model file paths
-models = {
-    "Logistic Regression": "models/linkguard_model.joblib",
-    "Random Forest": "models/linkguard_random_forest.joblib",
-    "Gradient Boosting": "models/linkguard_gradient_boosting.joblib"
-}
+def main():
+    test_path = BASE_DIR / "dataset2" / "split" / "test.csv"
+    if not test_path.exists():
+        print(f"ERROR: Testing dataset not found at: {test_path}")
+        print("Please run split_dataset.py first.")
+        raise SystemExit(1)
 
-results = []
+    print("Loading testing dataset...")
+    test_df = pd.read_csv(test_path)
+    X_test = test_df.drop(columns=["type"])
+    y_test = test_df["type"]
 
-# Evaluate each trained model
-for name, path in models.items():
-    print(f"\nEvaluating {name}...")
+    models = {
+        "Logistic Regression": BASE_DIR / "models" / "linkguard_model.joblib",
+        "Random Forest": BASE_DIR / "models" / "linkguard_random_forest.joblib",
+        "Gradient Boosting": BASE_DIR / "models" / "linkguard_gradient_boosting.joblib",
+        "LinkGuard Flagship (v2)": BASE_DIR / "models" / "linkguard_model_v2.joblib",
+    }
 
-    model = joblib.load(path)
-    predictions = model.predict(X_test)
+    results = []
 
-    accuracy = accuracy_score(y_test, predictions)
-    macro_f1 = f1_score(
-        y_test, predictions, average="macro"
-    )
-    phishing_recall = recall_score(
-        y_test,
-        predictions,
-        labels=["phishing"],
-        average="macro",
-        zero_division=0
-    )
+    for name, path in models.items():
+        if not path.exists():
+            print(f"Skipping {name} (model file not found at: {path.name})")
+            continue
 
-    results.append({
-        "Model": name,
-        "Accuracy (%)": round(accuracy * 100, 2),
-        "Macro F1 (%)": round(macro_f1 * 100, 2),
-        "Phishing Recall (%)": round(phishing_recall * 100, 2)
-    })
+        print(f"\nEvaluating {name}...")
+        try:
+            model = joblib.load(path)
+            predictions = model.predict(X_test)
 
-# Display comparison
-results_df = pd.DataFrame(results)
-results_df = results_df.sort_values(
-    by="Macro F1 (%)", ascending=False
-)
+            accuracy = accuracy_score(y_test, predictions)
+            macro_f1 = f1_score(y_test, predictions, average="macro", zero_division=0)
+            phishing_recall = recall_score(
+                y_test,
+                predictions,
+                labels=["phishing"],
+                average="macro",
+                zero_division=0
+            )
 
-print("\n========== MODEL COMPARISON ==========")
-print(results_df.to_string(index=False))
+            results.append({
+                "Model": name,
+                "Accuracy (%)": round(accuracy * 100, 2),
+                "Macro F1 (%)": round(macro_f1 * 100, 2),
+                "Phishing Recall (%)": round(phishing_recall * 100, 2)
+            })
+        except Exception as e:
+            print(f"Error evaluating {name}: {e}")
 
-# Save comparison results
-results_df.to_csv("models/model_comparison.csv", index=False)
-print("\nResults saved to models/model_comparison.csv")
+    if not results:
+        print("\nNo trained models were found to compare. Please train at least one model first.")
+        return
+
+    results_df = pd.DataFrame(results).sort_values(by="Macro F1 (%)", ascending=False)
+    print("\n========== MODEL COMPARISON ==========")
+    print(results_df.to_string(index=False))
+
+    out_path = BASE_DIR / "models" / "model_comparison.csv"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    results_df.to_csv(out_path, index=False)
+    print(f"\nResults saved to: {out_path}")
+
+
+if __name__ == "__main__":
+    main()

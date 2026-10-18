@@ -1,6 +1,10 @@
 import sys
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 import joblib
 import pandas as pd
 
@@ -14,30 +18,39 @@ from extract_features import (
 
 # Load the best available LinkGuard ML model
 MODEL_PATHS = [
-    Path("models/linkguard_gradient_boosting.joblib"),
-    Path("models/linkguard_model_v2.joblib"),
-    Path("models/linkguard_random_forest.joblib"),
+    BASE_DIR / "models" / "linkguard_gradient_boosting.joblib",
+    BASE_DIR / "models" / "linkguard_model_v2.joblib",
+    BASE_DIR / "models" / "linkguard_random_forest.joblib",
+    BASE_DIR / "models" / "linkguard_model.joblib",
 ]
 
-model = None
-model_source = None
-for path in MODEL_PATHS:
-    if path.exists():
-        model = joblib.load(path)
-        model_source = path.name
-        break
 
-if model is None:
-    print("ERROR: No trained model found in models/ directory!")
-    print("Please run 'python train_gradient_boosting.py' first.")
-    raise SystemExit(1)
+def load_model():
+    """Find and load the first available trained model."""
+    for path in MODEL_PATHS:
+        if path.exists():
+            try:
+                loaded = joblib.load(path)
+                return loaded, path.name
+            except Exception as e:
+                print(f"Warning: Failed to load {path.name}: {e}")
+    return None, None
 
 
-def evaluate_link(url_str):
+def evaluate_link(url_str, model=None, model_source=None):
+    if model is None or model_source is None:
+        model, model_source = load_model()
+
+    if model is None:
+        print("ERROR: No trained model found in models/ directory!")
+        print("Expected location:", (BASE_DIR / "models").resolve())
+        print("Please run 'python train_gradient_boosting.py' first.")
+        return False
+
     url = str(url_str).strip()
     if not url:
         print("Please provide a valid URL.")
-        return
+        return False
 
     canon = canonicalize_url(url)
     features_dict = extract_features(url)

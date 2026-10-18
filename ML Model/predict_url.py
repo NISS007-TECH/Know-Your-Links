@@ -1,6 +1,10 @@
 import sys
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 import joblib
 import pandas as pd
 
@@ -12,32 +16,41 @@ from extract_features import (
     get_registered_domain,
 )
 
-# Preferred model paths
+# Preferred model paths relative to this script
 MODEL_PATHS = [
-    Path("models/linkguard_gradient_boosting.joblib"),
-    Path("models/linkguard_model_v2.joblib"),
-    Path("models/linkguard_random_forest.joblib"),
+    BASE_DIR / "models" / "linkguard_gradient_boosting.joblib",
+    BASE_DIR / "models" / "linkguard_model_v2.joblib",
+    BASE_DIR / "models" / "linkguard_random_forest.joblib",
+    BASE_DIR / "models" / "linkguard_model.joblib",
 ]
 
-model = None
-chosen_path = None
-for p in MODEL_PATHS:
-    if p.exists():
-        chosen_path = p
-        model = joblib.load(p)
-        break
 
-if model is None:
-    print("ERROR: Trained model not found in models/ directory!")
-    print("Please run python train_gradient_boosting.py or python train_random_forest.py first.")
-    raise SystemExit(1)
+def load_model():
+    """Find and load the first available trained model."""
+    for p in MODEL_PATHS:
+        if p.exists():
+            try:
+                loaded = joblib.load(p)
+                return loaded, p
+            except Exception as e:
+                print(f"Warning: Failed to load {p.name}: {e}")
+    return None, None
 
 
-def analyze_url(url_input):
+def analyze_url(url_input, model=None, chosen_path=None):
+    if model is None or chosen_path is None:
+        model, chosen_path = load_model()
+
+    if model is None:
+        print("ERROR: Trained model not found in models/ directory!")
+        print("Expected location:", (BASE_DIR / "models").resolve())
+        print("Please run python train_gradient_boosting.py or python train_random_forest.py first.")
+        return False
+
     url = str(url_input).strip()
     if not url:
         print("Please enter a valid URL.")
-        return
+        return False
 
     canon = canonicalize_url(url)
     features_dict = extract_features(url)

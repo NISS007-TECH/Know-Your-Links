@@ -9,10 +9,11 @@ from sklearn.model_selection import train_test_split
 
 from extract_features import extract_features
 
-DATA_PATH = Path("dataset2/split/train.csv")
-TEST_PATH = Path("dataset2/split/test.csv")
-MODEL_PATH = Path("models/linkguard_model_v2.joblib")
-GB_MODEL_PATH = Path("models/linkguard_gradient_boosting.joblib")
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "dataset2" / "split" / "train.csv"
+TEST_PATH = BASE_DIR / "dataset2" / "split" / "test.csv"
+MODEL_PATH = BASE_DIR / "models" / "linkguard_model_v2.joblib"
+GB_MODEL_PATH = BASE_DIR / "models" / "linkguard_gradient_boosting.joblib"
 RANDOM_STATE = 42
 
 

@@ -49,27 +49,37 @@
 
 
 
+from pathlib import Path
 import pandas as pd
 
-df = pd.read_csv("dataset2/malicious_phish_clean.csv")
-
-print("Dataset shape:", df.shape)
-print("\nMissing values:")
-print(df.isnull().sum())
-
-print("\nDuplicate rows:", df.duplicated().sum())
-
-print("\nConflicting URLs:")
-print((df.groupby("url")["type"].nunique() > 1).sum())
-
-print("\nCategory counts:")
-print(df["type"].value_counts())
+BASE_DIR = Path(__file__).resolve().parent
 
 
+def main():
+    data_path = BASE_DIR / "malicious_phish_clean.csv"
+    if not data_path.exists():
+        print(f"Cleaned dataset not found at: {data_path}")
+        return
+
+    df = pd.read_csv(data_path)
+
+    print("Dataset shape:", df.shape)
+    print("\nMissing values:")
+    print(df.isnull().sum())
+
+    print("\nDuplicate rows:", df.duplicated().sum())
+
+    print("\nConflicting URLs:")
+    print((df.groupby("url")["type"].nunique() > 1).sum())
+
+    print("\nCategory counts:")
+    print(df["type"].value_counts())
+
+    print("\n--- SAMPLE URLS BY CATEGORY ---")
+    for category in df["type"].unique():
+        print(f"\nCategory: {category}")
+        print(df[df["type"] == category]["url"].head(3).to_string(index=False))
 
 
-print("\n--- SAMPLE URLS BY CATEGORY ---")
-
-for category in df["type"].unique():
-    print(f"\nCategory: {category}")
-    print(df[df["type"] == category]["url"].head(3).to_string(index=False))
+if __name__ == "__main__":
+    main()
